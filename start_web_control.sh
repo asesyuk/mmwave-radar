@@ -11,12 +11,34 @@ echo -e "==========================================${NC}"
 
 # Check if Flask is installed
 if ! python3 -c "import flask" 2>/dev/null; then
-    echo "Flask not found. Installing requirements..."
-    pip3 install -r requirements.txt
+    echo -e "${YELLOW}Flask not found. Please run the dependency installer first:${NC}"
+    echo "./install_web_deps.sh"
+    echo ""
+    read -p "Do you want to run the installer now? (y/N): " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        ./install_web_deps.sh
+        if [ $? -ne 0 ]; then
+            echo -e "${RED}Installation failed. Please check errors above.${NC}"
+            exit 1
+        fi
+    else
+        echo -e "${RED}Cannot start without Flask. Exiting.${NC}"
+        exit 1
+    fi
 fi
 
-# Get Pi's IP address
-PI_IP=$(hostname -I | awk '{print $1}')
+# Get IP address (works on both Linux and macOS)
+if command -v hostname >/dev/null 2>&1; then
+    # Try Linux style first
+    PI_IP=$(hostname -I 2>/dev/null | awk '{print $1}')
+    if [ -z "$PI_IP" ]; then
+        # Fall back to macOS/general method
+        PI_IP=$(ifconfig | grep "inet " | grep -v 127.0.0.1 | awk '{print $2}' | head -1)
+    fi
+else
+    PI_IP="localhost"
+fi
 
 echo -e "${GREEN}Starting web server...${NC}"
 echo ""

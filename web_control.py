@@ -273,7 +273,8 @@ def index():
     """Main control panel"""
     return render_template('index.html', 
                          config=current_config, 
-                         radar_running=is_radar_running())
+                         radar_running=is_radar_running(),
+                         current_time=datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
 @app.route('/api/status')
 def api_status():
@@ -342,12 +343,34 @@ def init_app():
 
 if __name__ == '__main__':
     init_app()
+    # Try different ports if 5000 is in use (common on macOS due to AirPlay)
+    ports_to_try = [5000, 5001, 8000, 8080, 8888]
+    
     print("=" * 60)
     print("mmWave Radar Web Control Panel")
     print("=" * 60)
     print("Starting web server...")
-    print("Access at: http://your-pi-ip:5000")
-    print("Local access: http://localhost:5000")
-    print("=" * 60)
     
-    app.run(host='0.0.0.0', port=5000, debug=False) 
+    for port in ports_to_try:
+        try:
+            import socket
+            # Test if port is available
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(1)
+            result = sock.connect_ex(('localhost', port))
+            sock.close()
+            
+            if result != 0:  # Port is available
+                print(f"Access at: http://your-device-ip:{port}")
+                print(f"Local access: http://localhost:{port}")
+                print("=" * 60)
+                app.run(host='0.0.0.0', port=port, debug=False)
+                break
+            else:
+                print(f"Port {port} is in use, trying next...")
+        except Exception as e:
+            print(f"Error testing port {port}: {e}")
+            continue
+    else:
+        print("ERROR: No available ports found!")
+        print("On macOS, try disabling AirPlay Receiver in System Settings") 
