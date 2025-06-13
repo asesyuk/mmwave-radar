@@ -20,6 +20,12 @@ app = Flask(__name__)
 # Global variables
 radar_process = None
 radar_data_queue = queue.Queue()
+recent_detections = []  # Store recent detection data
+radar_stats = {
+    'total_frames': 0,
+    'objects_detected': 0,
+    'last_detection': None
+}
 current_config = {
     'ID': 1,
     'X': 0.0,
@@ -70,13 +76,18 @@ def start_radar():
         # Create a modified radar script with current config
         create_radar_script_with_config()
         
-        # Start the radar process (allow output to terminal)
+        # Start the radar process and capture output
         radar_process = subprocess.Popen(
             ['python3', 'radar_configured.py'],
-            stdout=None,  # Let output go to terminal
-            stderr=None,  # Let errors go to terminal  
-            text=True
+            stdout=subprocess.PIPE,  # Capture output for web interface
+            stderr=subprocess.STDOUT,  # Combine stderr with stdout
+            text=True,
+            bufsize=1  # Line buffered
         )
+        
+        # Start a thread to read output and make it available to web interface
+        output_thread = threading.Thread(target=read_radar_output, daemon=True)
+        output_thread.start()
         
         time.sleep(1)  # Give it a moment to start
         
@@ -87,6 +98,73 @@ def start_radar():
             
     except Exception as e:
         return False, f"Error starting radar: {str(e)}"
+
+def read_radar_output():
+    """Read radar output and store for web interface"""
+    global radar_process, recent_detections, radar_stats
+    
+    if not radar_process:
+        return
+    
+    try:
+        for line in iter(radar_process.stdout.readline, ''):
+            if not line:
+                break
+                
+            line = line.strip()
+            if not line:
+                continue
+                
+            # Parse detection data
+            if "objects detected:" in line:
+                try:
+                    # Extract frame and object count
+                    parts = line.split()
+                    frame_idx = -1
+                    obj_count = 0
+                    
+                    for i, part in enumerate(parts):
+                        if part.startswith('#'):
+                            frame_idx = int(part[1:])
+                        elif part.isdigit() and i > 0 and parts[i-1] == '-':
+                            obj_count = int(part)
+                    
+                    radar_stats['total_frames'] = frame_idx
+                    if obj_count > 0:
+                        radar_stats['objects_detected'] += obj_count
+                        radar_stats['last_detection'] = datetime.now().isoformat()
+                        
+                        # Store recent detection
+                        detection = {
+                            'timestamp': datetime.now().isoformat(),
+                            'frame': frame_idx,
+                            'objects': obj_count,
+                            'message': line
+                        }
+                        recent_detections.append(detection)
+                        
+                        # Keep only last 50 detections
+                        if len(recent_detections) > 50:
+                            recent_detections.pop(0)
+                            
+                except Exception as e:
+                    pass  # Continue if parsing fails
+                    
+            # Also store general radar output
+            radar_data_queue.put({
+                'timestamp': datetime.now().isoformat(),
+                'message': line
+            })
+            
+            # Keep queue size manageable
+            if radar_data_queue.qsize() > 100:
+                try:
+                    radar_data_queue.get_nowait()
+                except queue.Empty:
+                    pass
+                    
+    except Exception as e:
+        print(f"Error reading radar output: {e}")
 
 def stop_radar():
     """Stop the radar process"""
@@ -282,6 +360,7 @@ def api_status():
     return jsonify({
         'running': is_radar_running(),
         'config': current_config,
+        'stats': radar_stats,
         'timestamp': datetime.now().isoformat()
     })
 
@@ -327,6 +406,28 @@ def api_config():
                 
         except Exception as e:
             return jsonify({'success': False, 'message': f'Error updating configuration: {str(e)}'})
+
+@app.route('/api/data')
+def api_data():
+    """Get recent radar detection data"""
+    return jsonify({
+        'detections': recent_detections[-20:],  # Last 20 detections
+        'stats': radar_stats,
+        'timestamp': datetime.now().isoformat()
+    })
+
+@app.route('/api/live')
+def api_live():
+    """Get live radar output stream"""
+    def generate():
+        while True:
+            try:
+                data = radar_data_queue.get(timeout=1)
+                yield f"data: {json.dumps(data)}\n\n"
+            except queue.Empty:
+                yield f"data: {json.dumps({'ping': datetime.now().isoformat()})}\n\n"
+    
+    return Response(generate(), mimetype='text/plain')
 
 @app.route('/config')
 def config_page():

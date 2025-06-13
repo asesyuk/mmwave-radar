@@ -275,10 +275,40 @@
                     <button class="btn" onclick="refreshStatus()">🔄 Refresh Status</button>
                     <button class="btn btn-config" onclick="window.location.href='/config'">⚙️ Edit Configuration</button>
                     <button class="btn" onclick="window.open('/api/status', '_blank')">📊 View API Status</button>
+                    <button class="btn" onclick="toggleDataView()" id="data-toggle-btn">📡 Show Live Data</button>
                 </div>
                 
                 <div style="margin-top: 15px; font-size: 0.9em; color: #666;">
                     <p><strong>Last Updated:</strong> <span id="last-updated">{{ current_time }}</span></p>
+                </div>
+            </div>
+            
+            <!-- Live Data Card (Initially Hidden) -->
+            <div class="card" id="live-data-card" style="display: none;">
+                <h2>📡 Live Radar Data</h2>
+                
+                <!-- Stats Section -->
+                <div class="info-grid" style="margin-bottom: 20px;">
+                    <div class="info-item">
+                        <div class="info-label">Total Frames</div>
+                        <div class="info-value" id="total-frames">0</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Objects Detected</div>
+                        <div class="info-value" id="objects-detected">0</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Last Detection</div>
+                        <div class="info-value" id="last-detection">None</div>
+                    </div>
+                </div>
+                
+                <!-- Recent Detections -->
+                <div style="margin-top: 20px;">
+                    <h3 style="color: #333; margin-bottom: 10px;">🎯 Recent Detections</h3>
+                    <div id="detections-list" style="max-height: 300px; overflow-y: auto; background: #f8f9fa; padding: 10px; border-radius: 8px; font-family: monospace; font-size: 0.9em;">
+                        <p style="color: #666; text-align: center;">No detections yet...</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -291,6 +321,79 @@
     <script>
         // Auto-refresh status every 5 seconds
         setInterval(refreshStatus, 5000);
+        
+        // Live data variables
+        let dataViewVisible = false;
+        let dataRefreshInterval = null;
+        
+        function toggleDataView() {
+            const card = document.getElementById('live-data-card');
+            const btn = document.getElementById('data-toggle-btn');
+            
+            dataViewVisible = !dataViewVisible;
+            
+            if (dataViewVisible) {
+                card.style.display = 'block';
+                btn.textContent = '📡 Hide Live Data';
+                startDataRefresh();
+            } else {
+                card.style.display = 'none';
+                btn.textContent = '📡 Show Live Data';
+                stopDataRefresh();
+            }
+        }
+        
+        function startDataRefresh() {
+            if (dataRefreshInterval) clearInterval(dataRefreshInterval);
+            
+            // Refresh data every 2 seconds
+            dataRefreshInterval = setInterval(refreshData, 2000);
+            refreshData(); // Initial load
+        }
+        
+        function stopDataRefresh() {
+            if (dataRefreshInterval) {
+                clearInterval(dataRefreshInterval);
+                dataRefreshInterval = null;
+            }
+        }
+        
+        async function refreshData() {
+            try {
+                const response = await fetch('/api/data');
+                const data = await response.json();
+                
+                // Update stats
+                document.getElementById('total-frames').textContent = data.stats.total_frames || 0;
+                document.getElementById('objects-detected').textContent = data.stats.objects_detected || 0;
+                
+                const lastDetection = data.stats.last_detection;
+                if (lastDetection) {
+                    const date = new Date(lastDetection);
+                    document.getElementById('last-detection').textContent = date.toLocaleTimeString();
+                } else {
+                    document.getElementById('last-detection').textContent = 'None';
+                }
+                
+                // Update detections list
+                const detectionsList = document.getElementById('detections-list');
+                if (data.detections && data.detections.length > 0) {
+                    let html = '';
+                    data.detections.slice(-10).reverse().forEach(detection => {
+                        const time = new Date(detection.timestamp).toLocaleTimeString();
+                        html += `<div style="margin-bottom: 5px; padding: 5px; background: white; border-radius: 4px;">
+                            <strong>[${time}]</strong> Frame #${detection.frame} - ${detection.objects} objects detected
+                        </div>`;
+                    });
+                    detectionsList.innerHTML = html;
+                } else {
+                    detectionsList.innerHTML = '<p style="color: #666; text-align: center;">No detections yet...</p>';
+                }
+                
+            } catch (error) {
+                console.error('Error refreshing data:', error);
+            }
+        }
         
         async function refreshStatus() {
             try {
