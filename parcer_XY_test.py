@@ -197,7 +197,8 @@ def parser_one_mmw_demo_output_packet(data, readNumBytes, ID, X_translation, Y_t
                          
     if headerStartIndex == -1:
         result = TC_FAIL
-        print("************ Frame Fail, cannot find the magic words *****************")
+        # This is normal when no complete packet is available, don't spam with errors
+        # print("************ Frame Fail, cannot find the magic words *****************")
         #fail_1 = str("************ Frame Fail, cannot find the magic words *****************").encode('utf-8')
         #UDPClient.sendto(fail_1, serverAddress)
     else:
@@ -205,12 +206,14 @@ def parser_one_mmw_demo_output_packet(data, readNumBytes, ID, X_translation, Y_t
 
         if int(headerStartIndex) + int(totalPacketNumBytes) > int(readNumBytes):
             result = TC_FAIL
-            print("********** Frame Fail, readNumBytes may not long enough ***********")
+            # This is normal - just means we need more data, don't print error
+            # print("********** Frame Fail, readNumBytes may not long enough ***********")
 #             fail_2 = str("************ Frame Fail, cannot find the magic words *****************").encode('utf-8')
 #             UDPClient.sendto(fail_2, serverAddress)
         elif int(nextHeaderStartIndex) + 8 < int(readNumBytes) and checkMagicPattern(data[int(nextHeaderStartIndex):int(nextHeaderStartIndex)+8:1]) == 0:
             result = TC_FAIL
-            print("********** Frame Fail, incomplete packet **********") 
+            # This can happen during normal operation, don't print unless debugging
+            # print("********** Frame Fail, incomplete packet **********") 
             #fail_3 = str("********** Frame Fail, incomplete packet **********").encode('utf-8')
             #UDPClient.sendto(fail_3, serverAddress) 
         elif int(numDetObj) < 0:

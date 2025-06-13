@@ -120,20 +120,23 @@ def main():
         
         frame_count = 0
         no_data_count = 0
+        data_buffer = bytearray()  # Buffer to accumulate data
         
         while True:
             # Read available data from radar
             byte_count = data_port.inWaiting()
             if byte_count > 0:
-                raw_data = data_port.read(byte_count)
+                new_data = data_port.read(byte_count)
+                data_buffer.extend(new_data)  # Add to buffer
                 no_data_count = 0  # Reset counter when we get data
                 
-                if len(raw_data) > 40:  # Only process if we have enough data for a header
+                # Only process if we have enough data for at least a header
+                if len(data_buffer) > 40:
                     # Parse the radar data
                     try:
                         result = parser_one_mmw_demo_output_packet(
-                            raw_data, 
-                            len(raw_data),
+                            data_buffer, 
+                            len(data_buffer),
                             sensor_config['ID'],
                             sensor_config['X'],
                             sensor_config['Y'], 
@@ -152,6 +155,11 @@ def main():
                             frame_count += 1
                             timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
                             
+                            # Remove processed data from buffer
+                            if header_start >= 0 and total_bytes > 0:
+                                bytes_to_remove = header_start + total_bytes
+                                data_buffer = data_buffer[bytes_to_remove:]
+                            
                             if num_objects > 0:
                                 print(f"\n[{timestamp}] Frame #{frame_count} - {num_objects} objects detected:")
                                 print("-" * 80)
@@ -166,9 +174,16 @@ def main():
                                 # Only show "no objects" message occasionally to avoid spam
                                 if frame_count % 50 == 0:  # Show every 50th frame
                                     print(f"[{timestamp}] Frame #{frame_count} - No objects detected")
+                        else:
+                            # Parser failed - might be incomplete data, just continue
+                            # Keep buffer but limit its size to prevent memory issues
+                            if len(data_buffer) > 10000:  # 10KB limit
+                                data_buffer = data_buffer[-5000:]  # Keep last 5KB
                     
                     except Exception as e:
                         print(f"Parser error: {e}")
+                        # Clear buffer on serious errors
+                        data_buffer = bytearray()
             
             else:
                 # No data available, increment counter
