@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Radar Configuration</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+        
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 25px;
+            font-size: 1.5em;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 10px;
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .form-group label {
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+        
+        .form-group input, .form-group textarea {
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+        
+        .form-group input:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .form-group small {
+            color: #666;
+            margin-top: 5px;
+            font-size: 0.85em;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #6c757d, #495057);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #28a745, #20c997);
+        }
+        
+        .message {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+        }
+        
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 15px 0;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .section-title {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0 15px 0;
+            border-left: 4px solid #667eea;
+        }
+        
+        .section-title h3 {
+            color: #667eea;
+            margin: 0;
+        }
+        
+        .help-text {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border-left: 4px solid #2196f3;
+        }
+        
+        .help-text h4 {
+            color: #1976d2;
+            margin-bottom: 10px;
+        }
+        
+        .help-text ul {
+            margin-left: 20px;
+            color: #424242;
+        }
+        
+        .actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 25px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚙️ Radar Configuration</h1>
+            <p>Configure sensor position and orientation parameters</p>
+        </div>
+        
+        <div class="card">
+            <h2>📍 Sensor Configuration</h2>
+            
+            <form id="config-form">
+                <!-- Basic Information -->
+                <div class="section-title">
+                    <h3>Basic Information</h3>
+                </div>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="name">Sensor Name</label>
+                        <input type="text" id="name" name="name" value="{{ config.name }}" required>
+                        <small>Descriptive name for this radar sensor</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="ID">Sensor ID</label>
+                        <input type="number" id="ID" name="ID" value="{{ config.ID }}" min="1" max="255" required>
+                        <small>Unique identifier (1-255)</small>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <textarea id="description" name="description" rows="2">{{ config.description }}</textarea>
+                    <small>Additional details about sensor location or purpose</small>
+                </div>
+                
+                <!-- Position Configuration -->
+                <div class="section-title">
+                    <h3>Position Configuration</h3>
+                </div>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="X">X Position (meters)</label>
+                        <input type="number" id="X" name="X" value="{{ config.X }}" step="0.01" required>
+                        <small>East-West position (+ = East)</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="Y">Y Position (meters)</label>
+                        <input type="number" id="Y" name="Y" value="{{ config.Y }}" step="0.01" required>
+                        <small>North-South position (+ = North)</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="Z">Z Position (meters)</label>
+                        <input type="number" id="Z" name="Z" value="{{ config.Z }}" step="0.01" required>
+                        <small>Height above ground (+ = Up)</small>
+                    </div>
+                </div>
+                
+                <!-- Orientation Configuration -->
+                <div class="section-title">
+                    <h3>Orientation Configuration</h3>
+                </div>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="yaw_psi">Yaw - ψ (degrees)</label>
+                        <input type="number" id="yaw_psi" name="yaw_psi" value="{{ config.yaw_psi }}" step="0.1" min="-180" max="180" required>
+                        <small>Rotation around Z-axis (0° = North)</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="pitch_theta">Pitch - θ (degrees)</label>
+                        <input type="number" id="pitch_theta" name="pitch_theta" value="{{ config.pitch_theta }}" step="0.1" min="-90" max="90" required>
+                        <small>Rotation around Y-axis (+ = Up)</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="roll_phi">Roll - φ (degrees)</label>
+                        <input type="number" id="roll_phi" name="roll_phi" value="{{ config.roll_phi }}" step="0.1" min="-180" max="180" required>
+                        <small>Rotation around X-axis (+ = Right)</small>
+                    </div>
+                </div>
+                
+                <!-- Timing Configuration -->
+                <div class="section-title">
+                    <h3>Timing Configuration</h3>
+                </div>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="sensor_delay">Processing Delay (seconds)</label>
+                        <input type="number" id="sensor_delay" name="sensor_delay" value="{{ config.sensor_delay }}" step="0.01" min="0.01" max="1.0" required>
+                        <small>Delay between processing cycles (0.01-1.0s)</small>
+                    </div>
+                </div>
+                
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p>Saving configuration...</p>
+                </div>
+                
+                <div class="message" id="message"></div>
+                
+                <div class="actions">
+                    <button type="button" class="btn btn-secondary" onclick="window.location.href='/'">🏠 Back to Control Panel</button>
+                    <button type="button" class="btn" onclick="resetForm()">🔄 Reset to Current</button>
+                    <button type="submit" class="btn btn-success">💾 Save Configuration</button>
+                </div>
+            </form>
+            
+            <div class="help-text">
+                <h4>📋 Configuration Help</h4>
+                <ul>
+                    <li><strong>Position:</strong> Set the physical location of the radar sensor in your coordinate system</li>
+                    <li><strong>Yaw:</strong> Horizontal rotation - 0° points North, 90° points East</li>
+                    <li><strong>Pitch:</strong> Vertical tilt - positive values tilt upward</li>
+                    <li><strong>Roll:</strong> Side-to-side rotation - usually kept at 0° unless sensor is tilted</li>
+                    <li><strong>Processing Delay:</strong> Controls how fast the radar processes data - lower values = faster updates</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const originalConfig = {{ config | tojson }};
+        
+        document.getElementById('config-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            await saveConfiguration();
+        });
+        
+        async function saveConfiguration() {
+            showLoading(true);
+            hideMessage();
+            
+            try {
+                const formData = new FormData(document.getElementById('config-form'));
+                const config = {};
+                
+                // Convert form data to config object
+                for (let [key, value] of formData.entries()) {
+                    if (['ID', 'X', 'Y', 'Z', 'sensor_delay', 'yaw_psi', 'pitch_theta', 'roll_phi'].includes(key)) {
+                        config[key] = parseFloat(value);
+                    } else {
+                        config[key] = value;
+                    }
+                }
+                
+                const response = await fetch('/api/config', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(config)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage('Configuration saved successfully! Changes will take effect when radar is restarted.', 'success');
+                    
+                    // Update original config for reset functionality
+                    Object.assign(originalConfig, config);
+                } else {
+                    showMessage('Error saving configuration: ' + result.message, 'error');
+                }
+                
+            } catch (error) {
+                showMessage('Error saving configuration: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        function resetForm() {
+            // Reset form to original values
+            for (const [key, value] of Object.entries(originalConfig)) {
+                const element = document.getElementById(key);
+                if (element) {
+                    element.value = value;
+                }
+            }
+            showMessage('Form reset to current configuration', 'success');
+        }
+        
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+        
+        function showMessage(text, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = text;
+            messageDiv.className = 'message ' + type;
+            messageDiv.style.display = 'block';
+            
+            // Auto-hide success messages after 5 seconds
+            if (type === 'success') {
+                setTimeout(() => {
+                    messageDiv.style.display = 'none';
+                }, 5000);
+            }
+        }
+        
+        function hideMessage() {
+            document.getElementById('message').style.display = 'none';
+        }
+        
+        // Validate numeric inputs in real-time
+        document.querySelectorAll('input[type="number"]').forEach(input => {
+            input.addEventListener('input', function() {
+                this.style.borderColor = this.checkValidity() ? '#e0e0e0' : '#f44336';
+            });
+        });
+    </script>
+</body>
+</html> 
