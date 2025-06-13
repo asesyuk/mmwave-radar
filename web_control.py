@@ -70,11 +70,11 @@ def start_radar():
         # Create a modified radar script with current config
         create_radar_script_with_config()
         
-        # Start the radar process
+        # Start the radar process (allow output to terminal)
         radar_process = subprocess.Popen(
             ['python3', 'radar_configured.py'],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stdout=None,  # Let output go to terminal
+            stderr=None,  # Let errors go to terminal  
             text=True
         )
         
